@@ -1,0 +1,9 @@
+function getName()
+	return "Filler Bot"
+end
+
+function main()
+end
+
+function onTick()
+end

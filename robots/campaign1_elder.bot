@@ -35,7 +35,7 @@ function main()
 		-- intro
 		ai.setSpawn(ELDERS, 100)
 		ai.setSpawn(BITFIGHTERS, 101)
-		ai.setSpawn(BADGUYS, 103)
+		ai.setSpawn(BADGUYS, 150, 151, 152, 153, 154, 155, 156, 157)
 		ai.moveTo(ZONES.start)
 		ai.say('So... I ask for the best of the best')
 		ai.say('And they send me more new recruits')
@@ -44,9 +44,6 @@ function main()
 		-- loadout training
 		ai.moveTo(ZONES.loadoutLesson)
 		ai.say('We have much to cover, and precious little time.')
-		ai.say('You know how to change your loadout don\'t you?')
-		ai.say('Press Z followed by number keys to select a loadout')
-		ai.say('Fly to the zone with the gear symbol to get your new equipment')
 		ai.await(function()
 			-- wait for all players to change their loadout
 			local done = true
@@ -68,10 +65,11 @@ function main()
 			end
 			return done
 		end,
-		'Equip the Triple blaster and some other gear',
-		'Press Z followed by number keys to select a loadout',
 		'You will need a Triple blaster for the trials ahead',
-		'Fly to the zone with the gear symbol to get your new equipment'
+		'You know how to change your loadout don\'t you?',
+		'Press Z followed by number keys to select a loadout',
+		'Fly to the zone with the gear symbol to get your new equipment',
+		'Equip the Triple blaster and some other gear'
 		)
 		ai.say('Well, at least you\'re not completely defenseless now')
 		ai.say('Follow me', true)
@@ -79,21 +77,22 @@ function main()
 		-- teach them about forcefields
 		ai.moveTo(ZONES.forcefieldLesson)
 		ai.say('These are forcefields. You can pass through forcefields of your own color')
-		ai.say('But you have to disable forcefields of other colors')
-		ai.say('Shoot at the triangles at the base of the forcefields to disable them', true)
 		ai.kill(function() 
 			-- whichever one is closest
 			return ai.closest(ObjType.ForceFieldProjector)
 		end)
 		-- wait for players to ai.kill other FFs
-		ai.await(ai.whenDisabled(90, 91, 92))
+		ai.await(ai.whenDisabled(90, 91, 92),
+		    'Shoot the triangles at the base of the forcefields to disable them',
+		    'You can pass through your team\'s forcefields, but not other teams\''
+			)
 
 		-- teach them about turrets
 		ai.moveTo(ZONES.turretLesson)
 		ai.say('In here are two turrets. They are dangerous to beginners, so be careful')
-		ai.say('Disable the turrets by shooting them, then we\'ll move on', true)
 		-- wait for the turrets to be disabled, and give some tips
 		ai.await(ai.whenDisabled(93, 94),
+		    'Disable the turrets by shooting them, then we\'ll move on',
 			'Turrets can be distracted with moving objects',
 			'It\'s best to use some cover when approaching a turret'
 			)
@@ -103,9 +102,8 @@ function main()
 		-- teach them about teleporters
 		ai.moveTo(ZONES.teleporterLesson)
 		ai.say('These are teleporters. They\'ll instantly transport you to their destination')
-		ai.say('Teleporters are usually only one-way. Only green teleporters can be destroyed', true)
-		-- wait for the turrets to be disabled, and give some tips
 		ai.await(ai.whenDisabled(95),
+			'Teleporters are usually only one-way. Only green teleporters can be destroyed',
 			'Go through the first teleporter, then destroy the green one',
 			'Don\'t be scared. It only hurts for a moment.'
 			)
@@ -115,11 +113,11 @@ function main()
 		ai.setSpawn(BITFIGHTERS, 104)
 		ai.moveTo(ZONES.baseElder)
 		ai.spawnAt(102, ELDERS, 'campaign1_soldier')
-		ai.signal('tutorial done')
 
 		-- the elder is interrupted by a frantic soldier, telling him that
 		-- a swarm of drones is incoming
 		ai.say('Easy enough. On to the next les--', true)
+		ai.signal('tutorial done')
 
 		-- wait for bad news from the soldier
 		ai.await('bad news')
@@ -130,20 +128,24 @@ function main()
 
 		-- fight off 10 drones
 		local dronesKilled = 0
-		ai.spawnAt(103, BADGUYS, 'drone')
-		ai.spawnAt(103, BADGUYS, 'drone')
-		ai.spawnAt(103, BADGUYS, 'drone')
-		ai.spawnAt(103, BADGUYS, 'drone')
+		ai.spawnAt(150, BADGUYS, 'drone')
+		ai.spawnAt(151, BADGUYS, 'drone')
+		ai.spawnAt(152, BADGUYS, 'drone')
+		ai.spawnAt(153, BADGUYS, 'drone')
+		ai.spawnAt(154, BADGUYS, 'drone')
+		ai.spawnAt(155, BADGUYS, 'drone')
+		ai.spawnAt(156, BADGUYS, 'drone')
+		ai.spawnAt(157, BADGUYS, 'drone')
 		ai.signal('drone attack', true)
 		ai.fight()
-		ai.await('drone killed', 10)
+		ai.await('drone killed', 32)
 		ai.signal('drone attack', false)
 		ai.fight(false)
 
 		-- post-fight drama
 		ai.pause(1000)
 		ai.say('How did a raiding swarm get all the way past our forward defenses?')
-		ai.say('That\'s certiainly not the last of them, either.')
+		ai.say('That\'s certainly not the last of them, either.')
 		ai.say('...')
 		ai.say('You did well today, recruit. Maybe you\'ll be a bitfighter yet.')
 		ai.say('Fly fast! We have to head off the rest of that swarm.', true)

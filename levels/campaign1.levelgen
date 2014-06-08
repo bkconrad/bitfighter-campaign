@@ -29,8 +29,9 @@ end
 
 function addFillerBot()
 	local spawnPos = bf:findObjectById(999):getPos()
-	local robot = Robot.new(spawnPos, 2, 'drone')
+	local robot = Robot.new(spawnPos, 2, 'filler')
 	bf:addItem(robot)
+	robot:setPos(spawnPos)
 	table.insert(gFillerBots, robot)
 end
 

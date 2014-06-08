@@ -5,9 +5,11 @@ local mb = require('messagebus')
 return function(bf, bot)
 	local DEBUG_FAST = false
 	local gLastChatter = 0
+	local gChatters = { }
 	local gTasks = { }
 	local gFighting = false
 	local gSpeaker = nil
+	local gLastStation = nil
 
 	local function init()
 		mb.listen(function(msg, data)
@@ -32,11 +34,11 @@ return function(bf, bot)
 		end)
 	end
 
-	local function chatter(...)
-		local chatters = { ... }
-		if #chatters > 0 and getMachineTime() - gLastChatter > 10000 then
-			bot:globalMsg(chatters[math.random(1, #chatters)])
-			gLastChatter = getMachineTime() + math.random(1, 1000)
+	local function chatter()
+		if #gChatters > 0 and getMachineTime() - gLastChatter > 8000 then
+			bot:globalMsg(gChatters[1])
+			table.remove(gChatters, 1)
+			gLastChatter = getMachineTime() + math.random(1, 2000)
 		end
 	end
 
@@ -48,6 +50,7 @@ return function(bf, bot)
 		end
 
 		table.insert(gTasks, function()
+			gLastStation = p
 			if DEBUG_FAST then
 				bot:setPos(p)
 			end
@@ -71,8 +74,8 @@ return function(bf, bot)
 
 	-- await('event name', count = 1)
 	-- waits for the named event to occur count times
-	-- await(fn, arg1, arg2, ...)
-	-- calls fn with the supplied args until it returns true
+	-- await(fn, str1, str2, ...)
+	-- waits for fn to return true, periodically saying str1, str2, etc. 
 	local function await(fn, ...)
 		local args = { ... }
 
@@ -106,11 +109,17 @@ return function(bf, bot)
 		end
 
 		-- task callback
+		local hasRun = false
 		table.insert(gTasks, function()
+			if not hasRun then
+				gChatters = args
+				hasRun = true
+			end
+
 			if fn() then
 				return true
 			else
-				chatter(unpack(args))
+				chatter()
 			end
 		end)
 	end
@@ -188,7 +197,8 @@ return function(bf, bot)
 		end)
 	end
 
-	local function setSpawn(team, id)
+	local function setSpawn(team, ...)
+		local ids = { ... }
 		table.insert(gTasks, function()
 			local spawns = { }
 			bf:findAllObjects(spawns, ObjType.ShipSpawn)
@@ -197,7 +207,10 @@ return function(bf, bot)
 					spawn:setTeam(Team.Hostile)
 				end
 			end
-			bf:findObjectById(id):setTeam(team)
+
+			for i, id in ipairs(ids) do
+				bf:findObjectById(id):setTeam(team)
+			end
 			return true
 		end)	
 	end
@@ -220,7 +233,7 @@ return function(bf, bot)
 
 		if #gTasks > 0 then
 			if gTasks[1]() then
-				-- result of true means the task is done, so remove the callback room the queue
+				-- result of true means the task is done, so remove the callback from the queue
 				table.remove(gTasks, 1, 1)
 			end
 		end
@@ -229,13 +242,18 @@ return function(bf, bot)
 			local target = bot:findClosestEnemy()
 			if target then
 				local waypoint = bot:getWaypoint(target:getPos())
-				if waypoint and point.distSquared(bot:getPos(), target:getPos()) > 2500 then
+				if waypoint and point.distSquared(bot:getPos(), target:getPos()) > 10000 then
 					bot:setThrustToPt(waypoint)
 				end
 
 				if bot:canSeePoint(target:getPos()) then
 					bot:setAngle(target:getPos())
 					bot:fireWeapon(Weapon.Phaser)
+				end
+			elseif gLastStation then
+				local waypoint = bot:getWaypoint(gLastStation)
+				if waypoint and point.distSquared(bot:getPos(), waypoint) > 2500 then
+					bot:setThrustToPt(waypoint)
 				end
 			end
 		end
@@ -327,6 +345,8 @@ return function(bf, bot)
 			doIt = true
 		end
 		once(function()
+			logprint(bot:getPlayerInfo():getName())
+			logprint(doIt)
 			gFighting = doIt
 		end)
 	end
@@ -340,7 +360,7 @@ return function(bf, bot)
 
 		-- wait a moment for players to read
 		if not immediate and not DEBUG_FAST then
-			pause(math.max(1000, #s * 75))
+			pause(math.max(1000, #s * 50))
 		end
 	end
 
