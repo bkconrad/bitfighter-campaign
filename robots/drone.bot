@@ -32,7 +32,10 @@ function onTick()
 	if target then
 		local pos = target:getPos()
 		if pos then
-			bot:setThrustToPt(bot:getWaypoint(pos))
+			local waypoint = bot:getWaypoint(pos)
+			if waypoint then
+				bot:setThrustToPt(waypoint)
+			end
 
 			-- run fast if we're dying
 			if lowHealth then

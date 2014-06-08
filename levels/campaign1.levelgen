@@ -1,5 +1,9 @@
+local gFillerBots = { }
 function main()
 	bf:subscribe(Event.PlayerJoined)
+	bf:subscribe(Event.PlayerLeft)
+	addFillerBot()
+	addFillerBot()
 	Timer:scheduleOnce(function()
 		local gramps = Robot.new(bf:findObjectById(100):getPos(), 1, 'campaign1_elder')
 		bf:addItem(gramps)
@@ -9,15 +13,32 @@ end
 
 function onPlayerJoined(player)
 	if not player:isRobot() then
-		-- count the number on each team
-		local players = bf:getGameInfo():getTeam(1):getPlayerCount()
-		local enemies = bf:getGameInfo():getTeam(2):getPlayerCount()
-		local spawnPos = bf:findObjectById(999):getPos()
+		Timer:scheduleOnce(function()
+			addFillerBot()
+		end, 0)
+	end
+end
 
-		if enemies >= players then
-			for i=1,enemies-players+1 do
-				bf:addItem(Robot.new(spawnPos, 2, 'drone'))
-			end
+function onPlayerLeft(player)
+	if not player:isRobot() then
+		Timer:scheduleOnce(function()
+			kickFillerBot()
+		end, 0)
+	end
+end
+
+function addFillerBot()
+	local spawnPos = bf:findObjectById(999):getPos()
+	local robot = Robot.new(spawnPos, 2, 'drone')
+	bf:addItem(robot)
+	table.insert(gFillerBots, robot)
+end
+
+function kickFillerBot()
+	if #gFillerBots > 0 then
+		if gFillerBots[1] then
+			gFillerBots[1]:removeFromGame()
 		end
+		table.remove(gFillerBots, 1)
 	end
 end
