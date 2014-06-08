@@ -353,7 +353,19 @@ return function(bf, bot)
 
 	local function say(s, immediate)
 		signal('speaking', bot)
+
+		-- RPG-style character bumps to show who's talking
+		local movementPhase = 0
+		local angle
 		table.insert(gTasks, function()
+			if movementPhase == 0 then
+				angle = bot:getAngle()
+				bot:setThrust(1.0, angle)
+				movementPhase = 1
+			elseif movementPhase == 1 then
+				bot:setThrust(1.0, math.tau - angle)
+				movementPhase = 2
+			end
 			bot:globalMsg(s)
 			return true
 		end)
