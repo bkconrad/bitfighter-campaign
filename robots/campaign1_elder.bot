@@ -9,7 +9,8 @@ ZONES = {
 	teleporterLesson = 5,
 	base = 6,
 	defense = 7,
-	core = 8
+	core = 8,
+	baseElder = 9
 }
 
 local BITFIGHTERS = 1
@@ -111,7 +112,7 @@ function main()
 		-- prepare for the drone ambush
 		ai.setSpawn(ELDERS, 102)
 		ai.setSpawn(BITFIGHTERS, 104)
-		ai.moveTo(ZONES.base)
+		ai.moveTo(ZONES.baseElder)
 		ai.spawnAt(102, ELDERS, 'campaign1_soldier')
 		ai.signal('tutorial done')
 
@@ -146,6 +147,7 @@ function main()
 		ai.say('You did well today, recruit. Maybe you\'ll be a bitfighter yet.')
 		ai.say('Fly fast! We have to head off the rest of that swarm.', true)
 		ai.disable(96, 97, 98)
+		ai.signal('attack core')
 		ai.moveTo(ZONES.core, true)
 		ai.kill(200)
 

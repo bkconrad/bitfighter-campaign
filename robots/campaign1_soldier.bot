@@ -28,14 +28,16 @@ function main()
 	ai.moveTo(ZONES.base, true)
 	ai.say('Sir! Our sensor arrays detect a swarm of Zapatistas approaching fast!')
 	ai.signal('bad news')
+	ai.moveTo(ZONES.defense)
 
 	-- now fight alongside our hero
 	ai.await('drone attack')
 	ai.fight()
-	ai.moveTo(ZONES.defense)
 	ai.await('drone attack')
 	ai.fight(false)
-	ai.moveTo(ZONES.core)
+	ai.await('attack core')
+	ai.moveTo(ZONES.core, true)
+	ai.kill(200)
 end
 
 function onTick(delta)
