@@ -7,6 +7,19 @@ return function(bf, bot)
 	local gLastChatter = 0
 	local gTasks = { }
 	local gFighting = false
+	local gSpeaker = nil
+
+	local function init()
+		mb.listen(function(msg, data)
+			if msg == 'speaking' then
+				gSpeaker = data
+			end
+
+			if bot == nil then
+				return true
+			end
+		end)
+	end
 
 	local function pause(millis)
 		local start
@@ -54,18 +67,6 @@ return function(bf, bot)
 				end
 			end
 		end)
-	end
-
-	local function say(s, immediate)
-		table.insert(gTasks, function()
-			bot:globalMsg(s)
-			return true
-		end)
-
-		-- wait a moment for players to read
-		if not immediate and not DEBUG_FAST then
-			pause(math.max(1000, #s * 75))
-		end
 	end
 
 	-- await('event name', count = 1)
@@ -210,6 +211,13 @@ return function(bf, bot)
 	end
 
 	local function performTasks()
+		if gSpeaker and gSpeaker ~= bot then
+			local pos = gSpeaker:getPos()
+			if pos then
+				bot:setAngle(pos)
+			end
+		end
+
 		if #gTasks > 0 then
 			if gTasks[1]() then
 				-- result of true means the task is done, so remove the callback room the queue
@@ -323,8 +331,22 @@ return function(bf, bot)
 		end)
 	end
 
+	local function say(s, immediate)
+		signal('speaking', bot)
+		table.insert(gTasks, function()
+			bot:globalMsg(s)
+			return true
+		end)
+
+		-- wait a moment for players to read
+		if not immediate and not DEBUG_FAST then
+			pause(math.max(1000, #s * 75))
+		end
+	end
+
 	return {
 		chatter = chatter,
+		init = init,
 		done = done,
 		whenRecieved = whenRecieved,
 		moveTo = moveTo,

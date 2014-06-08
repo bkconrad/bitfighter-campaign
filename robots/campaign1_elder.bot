@@ -31,6 +31,7 @@ function main()
 	bf:findObjectById(95):setEngineered(true)
 
 	Timer:scheduleOnce(function() 
+		ai.init()
 		-- intro
 		ai.setSpawn(ELDERS, 100)
 		ai.setSpawn(BITFIGHTERS, 101)
