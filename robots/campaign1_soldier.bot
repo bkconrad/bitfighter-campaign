@@ -1,0 +1,43 @@
+local ai = require('ai')(bf, bot)
+
+ZONES = {
+	start = 1,
+	loadoutLesson = 2,
+	forcefieldLesson = 3,
+	turretLesson = 4,
+	teleporterLesson = 5,
+	base = 6,
+	defense = 7,
+	core = 8
+}
+
+function getName()
+	return "Pvt. Peaches"
+end
+
+function main()
+	-- -- Find script zones
+	for k,v in pairs(ZONES) do
+		ZONES[k] = bf:findObjectById(v)
+	end
+
+	-- wait for the tutorial to complete
+	ai.await('tutorial done')
+
+	-- quick, quick!
+	ai.moveTo(ZONES.base, true)
+	ai.say('Sir! Our sensor arrays detect a swarm of Zapatistas approaching fast!')
+	ai.signal('bad news')
+
+	-- now fight alongside our hero
+	ai.await('drone attack')
+	ai.fight()
+	ai.moveTo(ZONES.defense)
+	ai.await('drone attack')
+	ai.fight(false)
+	ai.moveTo(ZONES.core)
+end
+
+function onTick(delta)
+	ai.performTasks()
+end

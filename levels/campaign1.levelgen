@@ -1,0 +1,23 @@
+function main()
+	bf:subscribe(Event.PlayerJoined)
+	Timer:scheduleOnce(function()
+		local gramps = Robot.new(bf:findObjectById(100):getPos(), 1, 'campaign1_elder')
+		bf:addItem(gramps)
+		gramps:setPos(bf:findObjectById(100):getPos())
+	end, 100)
+end
+
+function onPlayerJoined(player)
+	if not player:isRobot() then
+		-- count the number on each team
+		local players = bf:getGameInfo():getTeam(1):getPlayerCount()
+		local enemies = bf:getGameInfo():getTeam(2):getPlayerCount()
+		local spawnPos = bf:findObjectById(999):getPos()
+
+		if enemies >= players then
+			for i=1,enemies-players+1 do
+				bf:addItem(Robot.new(spawnPos, 2, 'drone'))
+			end
+		end
+	end
+end

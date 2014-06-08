@@ -1,0 +1,66 @@
+local mb = require('messagebus')
+
+local gEnabled = true
+local gLastFire = 0
+
+function getName()
+	return "Drone"
+end
+
+function main()
+	mb.listen(function(msg, data)
+		if msg == 'drone attack' then
+			gEnabled = data
+			if data == false then
+				bot:setHealth(0)
+				bot:removeFromGame()
+			end
+		end
+	end)
+
+	bf:subscribe(Event.ShipKilled)
+end
+
+function onTick()
+	local lowHealth = bot:getHealth() < .5
+
+	if not gEnabled then
+		return
+	end
+
+	local target = bot:findClosestEnemy(-1)
+	if target then
+		local pos = target:getPos()
+		if pos then
+			bot:setThrustToPt(bot:getWaypoint(pos))
+
+			-- run fast if we're dying
+			if lowHealth then
+				bot:fireModule(Module.Turbo)
+			end
+
+			if bot:canSeePoint(pos) then
+				-- run away if we're too close or low on health
+				if point.distSquared(bot:getPos(), pos) < 2500 or lowHealth then
+					bot:setThrustToPt(bot:getPos() - pos)
+				end
+
+				-- don't have perfect aim, please
+				local jitter = point.new(math.random(50) - 25, math.random(50) - 25)
+				bot:setAngle(pos + jitter)
+
+				-- take it easy, don't rapid-fire
+				if getMachineTime() - gLastFire > 300 then
+					gLastFire = getMachineTime()
+					bot:fireWeapon(Weapon.Phaser)
+				end
+			end
+		end
+	end
+end
+
+function onShipKilled(ship)
+	if ship == bot then
+		mb.emit('drone killed')
+	end
+end

@@ -1,0 +1,158 @@
+local ai = require('ai')(bf, bot)
+local mb = require('messagebus')
+
+ZONES = {
+	start = 1,
+	loadoutLesson = 2,
+	forcefieldLesson = 3,
+	turretLesson = 4,
+	teleporterLesson = 5,
+	base = 6,
+	defense = 7,
+	core = 8
+}
+
+local BITFIGHTERS = 1
+local BADGUYS = 2
+local ELDERS = 1
+function getName()
+	return "Gen. Gramps"
+end
+
+function main()
+
+	-- Find script zones
+	for k,v in pairs(ZONES) do
+		ZONES[k] = bf:findObjectById(v)
+	end
+
+	-- make this teleporter destructable
+	bf:findObjectById(95):setEngineered(true)
+
+	Timer:scheduleOnce(function() 
+		-- intro
+		ai.setSpawn(ELDERS, 100)
+		ai.setSpawn(BITFIGHTERS, 101)
+		ai.setSpawn(BADGUYS, 103)
+		ai.moveTo(ZONES.start)
+		ai.say('So... I ask for the best of the best')
+		ai.say('And they send me more new recruits')
+		ai.say('I guess you\'ll have to do. Follow me.')
+
+		-- loadout training
+		ai.moveTo(ZONES.loadoutLesson)
+		ai.say('We have much to cover, and precious little time.')
+		ai.say('You know how to change your loadout don\'t you?')
+		ai.say('Press Z followed by number keys to select a loadout')
+		ai.say('Fly to the zone with the gear symbol to get your new equipment')
+		ai.await(function()
+			-- wait for all players to change their loadout
+			local done = true
+			local result = { }
+			local ships = bf:findAllObjects(result, ObjType.Ship)
+			for i, ship in pairs(result) do
+				if ship then
+					local info = ship:getPlayerInfo()
+					if not info:isRobot() then
+						local loadout = ship:getLoadout()
+						if loadout[3] ~= Weapon.Triple and 
+						   loadout[4] ~= Weapon.Triple and
+						   loadout[5] ~= Weapon.Triple
+						then
+							done = false
+						end 
+					end
+				end
+			end
+			return done
+		end,
+		'Equip the Triple blaster and some other gear',
+		'Press Z followed by number keys to select a loadout',
+		'You will need a Triple blaster for the trials ahead',
+		'Fly to the zone with the gear symbol to get your new equipment'
+		)
+		ai.say('Well, at least you\'re not completely defenseless now')
+		ai.say('Follow me', true)
+
+		-- teach them about forcefields
+		ai.moveTo(ZONES.forcefieldLesson)
+		ai.say('These are forcefields. You can pass through forcefields of your own color')
+		ai.say('But you have to disable forcefields of other colors')
+		ai.say('Shoot at the triangles at the base of the forcefields to disable them', true)
+		ai.kill(function() 
+			-- whichever one is closest
+			return ai.closest(ObjType.ForceFieldProjector)
+		end)
+		-- wait for players to ai.kill other FFs
+		ai.await(ai.whenDisabled(90, 91, 92))
+
+		-- teach them about turrets
+		ai.moveTo(ZONES.turretLesson)
+		ai.say('In here are two turrets. They are dangerous to beginners, so be careful')
+		ai.say('Disable the turrets by shooting them, then we\'ll move on', true)
+		-- wait for the turrets to be disabled, and give some tips
+		ai.await(ai.whenDisabled(93, 94),
+			'Turrets can be distracted with moving objects',
+			'It\'s best to use some cover when approaching a turret'
+			)
+		ai.disable(99)
+		ai.say('Not bad. Let\'s keep moving', true)
+
+		-- teach them about teleporters
+		ai.moveTo(ZONES.teleporterLesson)
+		ai.say('These are teleporters. They\'ll instantly transport you to their destination')
+		ai.say('Teleporters are usually only one-way. Only green teleporters can be destroyed', true)
+		-- wait for the turrets to be disabled, and give some tips
+		ai.await(ai.whenDisabled(95),
+			'Go through the first teleporter, then destroy the green one',
+			'Don\'t be scared. It only hurts for a moment.'
+			)
+
+		-- prepare for the drone ambush
+		ai.setSpawn(ELDERS, 102)
+		ai.setSpawn(BITFIGHTERS, 104)
+		ai.moveTo(ZONES.base)
+		ai.spawnAt(102, ELDERS, 'campaign1_soldier')
+		ai.signal('tutorial done')
+
+		-- the elder is interrupted by a frantic soldier, telling him that
+		-- a swarm of drones is incoming
+		ai.say('Easy enough. On to the next les--', true)
+
+		-- wait for bad news from the soldier
+		ai.await('bad news')
+		ai.say('Those villians! How did they get all the way out here?')
+		ai.say('Alright, recruit. I guess you\'re getting some battle training today')
+		ai.say('Stick with me and defend this base!', true)
+		ai.moveTo(ZONES.defense)
+
+		-- fight off 10 drones
+		local dronesKilled = 0
+		ai.spawnAt(103, BADGUYS, 'drone')
+		ai.spawnAt(103, BADGUYS, 'drone')
+		ai.spawnAt(103, BADGUYS, 'drone')
+		ai.spawnAt(103, BADGUYS, 'drone')
+		ai.signal('drone attack', true)
+		ai.fight()
+		ai.await('drone killed', 10)
+		ai.signal('drone attack', false)
+		ai.fight(false)
+
+		-- post-fight drama
+		ai.pause(1000)
+		ai.say('How did a raiding swarm get all the way past our forward defenses?')
+		ai.say('That\'s certiainly not the last of them, either.')
+		ai.say('...')
+		ai.say('You did well today, recruit. Maybe you\'ll be a bitfighter yet.')
+		ai.say('Fly fast! We have to head off the rest of that swarm.', true)
+		ai.disable(96, 97, 98)
+		ai.moveTo(ZONES.core, true)
+		ai.kill(200)
+
+	end, 1000)
+end
+
+function onTick(delta)
+	bot:setHealth(1)
+	ai.performTasks()
+end
