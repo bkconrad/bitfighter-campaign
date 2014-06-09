@@ -2,14 +2,14 @@ local mb = require('messagebus')
 
 local gEnabled = true
 local gLastFire = 0
-local NORMAL_SPEED = .7
+local NORMAL_SPEED = .85
 local ENGAGEMENT_DISTANCE = 200
 local CHARGE_DISTANCE = ENGAGEMENT_DISTANCE * 2
 local BUDDY_DISTANCE = 150
-local JITTER_DISTANCE = 30
-local FIRE_DELAY = 300
+local JITTER_DISTANCE = 70
+local FIRE_DELAY = 200
 local LOW_HEALTH = .1
-local STARTING_HEALTH = .25
+local STARTING_HEALTH = .4
 
 function getName()
 	return "Drone"
@@ -75,7 +75,7 @@ function onTick()
 			local magnitude = nil
 			local botPos = bot:getPos()
 			local shipPos = ship:getPos()
-			if botPos and shipPos then
+			if botPos and shipPos and bot:canSeePoint(shipPos) then
 				moveVector = moveVector + attract(botPos, shipPos, BUDDY_DISTANCE)
 				moveVector = moveVector + 3*repulse(botPos, shipPos, BUDDY_DISTANCE * 1.5)
 			end
@@ -83,6 +83,7 @@ function onTick()
 	end
 
 	local target = bot:findClosestEnemy(-1)
+	local waypointVector = point.zero
 
 	if target then
 		local pos = target:getPos()
@@ -104,15 +105,22 @@ function onTick()
 			else
 				local waypoint = bot:getWaypoint(pos)
 				if waypoint then
-					moveVector = moveVector + point.normalize(waypoint - bot:getPos())
+					waypointVector = point.normalize(waypoint - bot:getPos())
 				end
 			end
 		end
 	end
 
 	local unit = point.normalize(moveVector)
-	if unit.x == unit.x and unit.y == unit.y then
-		local angle = math.atan2(unit.y, unit.x)
+	if not (unit.x == unit.x and unit.y == unit.y) then
+		unit = point.zero
+	end
+
+	-- now we mix the waypoint in with the manuevering
+	unit = point.normalize(unit*.5 + waypointVector*.5)
+	local angle = math.atan2(unit.y, unit.x)
+
+	if angle == angle then
 		bot:setThrust(NORMAL_SPEED, angle)
 	end
 	

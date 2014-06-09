@@ -138,7 +138,7 @@ function main()
 		ai.spawnAt(157, BADGUYS, 'drone')
 		ai.signal('drone attack', true)
 		ai.fight()
-		ai.await('drone killed', 32)
+		ai.await('drone killed', 50)
 		ai.signal('drone attack', false)
 		ai.fight(false)
 
