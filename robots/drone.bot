@@ -2,6 +2,14 @@ local mb = require('messagebus')
 
 local gEnabled = true
 local gLastFire = 0
+local NORMAL_SPEED = .7
+local ENGAGEMENT_DISTANCE = 200
+local CHARGE_DISTANCE = ENGAGEMENT_DISTANCE * 2
+local BUDDY_DISTANCE = 150
+local JITTER_DISTANCE = 30
+local FIRE_DELAY = 300
+local LOW_HEALTH = .1
+local STARTING_HEALTH = .25
 
 function getName()
 	return "Drone"
@@ -19,51 +27,142 @@ function main()
 	end)
 
 	bf:subscribe(Event.ShipKilled)
+	bf:subscribe(Event.ShipSpawned)
 end
 
-function onTick()
-	local lowHealth = bot:getHealth() < .5
+function onShipSpawned(ship)
+	if ship == bot then
 
-	if not gEnabled then
-		return
-	end
-
-	local target = bot:findClosestEnemy(-1)
-	if target then
-		local pos = target:getPos()
-		if pos then
-			local waypoint = bot:getWaypoint(pos)
-			if waypoint then
-				bot:setThrustToPt(waypoint)
-			end
-
-			-- run fast if we're dying
-			if lowHealth then
-				bot:fireModule(Module.Turbo)
-			end
-
-			if bot:canSeePoint(pos) then
-				-- run away if we're too close or low on health
-				if point.distSquared(bot:getPos(), pos) < 2500 or lowHealth then
-					bot:setThrustToPt(bot:getPos() - pos)
-				end
-
-				-- don't have perfect aim, please
-				local jitter = point.new(math.random(50) - 25, math.random(50) - 25)
-				bot:setAngle(pos + jitter)
-
-				-- take it easy, don't rapid-fire
-				if getMachineTime() - gLastFire > 300 then
-					gLastFire = getMachineTime()
-					bot:fireWeapon(Weapon.Phaser)
-				end
-			end
+		-- create drone list if it doesn't exist
+		if mb.drones == nil then
+			mb.drones = { }
 		end
+
+		-- add ourself to the list of living drones
+		table.insert(mb.drones, ship)
+
+		bot:setHealth(STARTING_HEALTH)
 	end
 end
 
 function onShipKilled(ship)
 	if ship == bot then
 		mb.emit('drone killed')
+
+		-- remove ourself from the list of living drones
+		for i, ship in ipairs(mb.drones) do
+			if ship == bot then
+				table.remove(mb.drones, i)
+				break
+			end
+		end
 	end
+end
+
+function onTick()
+
+	if not gEnabled then
+		return
+	end
+
+	local lowHealth = bot:getHealth() < LOW_HEALTH
+	local moveVector = point.zero
+
+	-- flocking pressure
+	for i, ship in ipairs(mb.drones) do
+		if bot ~= ship then
+			local delta = nil
+			local magnitude = nil
+			local botPos = bot:getPos()
+			local shipPos = ship:getPos()
+			if botPos and shipPos then
+				moveVector = moveVector + attract(botPos, shipPos, BUDDY_DISTANCE)
+				moveVector = moveVector + 3*repulse(botPos, shipPos, BUDDY_DISTANCE * 1.5)
+			end
+		end
+	end
+
+	local target = bot:findClosestEnemy(-1)
+
+	if target then
+		local pos = target:getPos()
+		if pos then
+
+			moveVector = moveVector + repulse(bot:getPos(), pos, 2 * ENGAGEMENT_DISTANCE)
+			if bot:canSeePoint(pos) then
+				moveVector = moveVector + attract(bot:getPos(), pos, ENGAGEMENT_DISTANCE)
+
+				-- don't have perfect aim, please
+				local jitter = point.new(math.random(JITTER_DISTANCE) - JITTER_DISTANCE / 2, math.random(JITTER_DISTANCE) - JITTER_DISTANCE / 2)
+				bot:setAngle(pos + jitter)
+
+				-- take it easy, don't rapid-fire
+				if getMachineTime() - gLastFire > FIRE_DELAY then
+					gLastFire = getMachineTime()
+					bot:fireWeapon(Weapon.Phaser)
+				end
+			else
+				local waypoint = bot:getWaypoint(pos)
+				if waypoint then
+					moveVector = moveVector + point.normalize(waypoint - bot:getPos())
+				end
+			end
+		end
+	end
+
+	local unit = point.normalize(moveVector)
+	if unit.x == unit.x and unit.y == unit.y then
+		local angle = math.atan2(unit.y, unit.x)
+		bot:setThrust(NORMAL_SPEED, angle)
+	end
+	
+	-- run fast if we're dying
+	-- if lowHealth then
+	-- 	bot:fireModule(Module.Turbo)
+	-- end
+end
+
+function attract(p1, p2, maxDistance)
+	local distance = point.distanceTo(p1, p2)
+
+	local magnitude = 1.0 - math.min(1.0, (distance - maxDistance) / maxDistance)
+	local delta = p2 - p1
+	local unit = point.normalize(delta)
+	local result = unit * magnitude
+
+	-- handle nan
+	if result.x ~= result.x then
+		result = point.new(0, result.y)
+	end
+
+	-- handle nan
+	if result.y ~= result.y then
+		result = point.new(result.x, 0)
+	end
+
+	return result
+end
+
+function repulse(p1, p2, maxDistance)
+	local distance = point.distanceTo(p1, p2)
+	if distance >= maxDistance then
+		return point.zero
+	end
+
+	local magnitude = (maxDistance - distance) / maxDistance
+	local delta = p1 - p2
+	local unit = point.normalize(delta)
+	local result = unit * magnitude
+
+	-- handle nan
+	if result.x ~= result.x then
+		result = point.new(0, result.y)
+	end
+
+	-- handle nan
+	if result.y ~= result.y then
+		result = point.new(result.x, 0)
+	end
+
+	return result
 end

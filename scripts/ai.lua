@@ -242,7 +242,7 @@ return function(bf, bot)
 			local target = bot:findClosestEnemy()
 			if target then
 				local waypoint = bot:getWaypoint(target:getPos())
-				if waypoint and point.distSquared(bot:getPos(), target:getPos()) > 10000 then
+				if waypoint and point.distSquared(bot:getPos(), target:getPos()) > 255*255 then
 					bot:setThrustToPt(waypoint)
 				end
 

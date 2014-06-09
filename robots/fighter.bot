@@ -1,0 +1,14 @@
+local ai = require('ai')(bf, bot)
+
+function getName()
+	return "Fighter"
+end
+
+function main()
+	ai.moveTo(point.zero)
+	ai.fight(true)
+end
+
+function onTick(delta)
+	ai.performTasks()
+end
