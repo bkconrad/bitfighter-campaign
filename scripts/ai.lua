@@ -3,7 +3,7 @@ local mb = require('messagebus')
 -- we need new instances of these variables for each script that uses ai, so we
 -- have to return a factory function
 return function(bf, bot)
-	local DEBUG_FAST = true
+	local DEBUG_FAST = false
 	local gLastChatter = 0
 	local gChatters = { }
 	local gTasks = { }
